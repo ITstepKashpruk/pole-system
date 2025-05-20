@@ -1,8 +1,9 @@
-import { auth, db } from '../firebaseConfig'
+import { db, app } from '../firebaseConfig'
+import { getAuth } from 'firebase/auth'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { useAuthStore } from '../stores/authStore'
-
+const auth = getAuth(app)
 const initUser = async (firebaseUser) => {
   const authStore = useAuthStore()
 
