@@ -15,34 +15,29 @@
 
 <script setup>
 import { ref } from 'vue'
-import { auth } from '../firebaseConfig'
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth'
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth'
+import { app } from '../firebaseConfig' // 👈 Ми імпортуємо саме app
+const auth = getAuth(app) // 👈 Створюємо тут (не через окремий імпорт)
 
 const phone = ref('')
 const code = ref('')
 const confirm = ref(null)
 
-let recaptchaVerifier = null
-
 const sendCode = async () => {
   try {
-    if (!recaptchaVerifier) {
-      recaptchaVerifier = new RecaptchaVerifier(
-        'recaptcha-container',
-        {
-          size: 'invisible',
-          callback: () => {
-            console.log('reCAPTCHA resolved')
-          }
-        },
-        auth
-      )
-      await recaptchaVerifier.render()
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
+        size: 'invisible',
+        callback: (response) => {
+          console.log('reCAPTCHA solved:', response)
+        }
+      }, auth)
+      await window.recaptchaVerifier.render()
     }
 
-    const result = await signInWithPhoneNumber(auth, phone.value, recaptchaVerifier)
+    const result = await signInWithPhoneNumber(auth, phone.value, window.recaptchaVerifier)
     confirm.value = result
-    alert('Код надіслано (або готовий у тестовому режимі)')
+    alert('Код надіслано')
   } catch (err) {
     console.error('sendCode помилка:', err)
     alert('Помилка: ' + err.message)
@@ -54,7 +49,6 @@ const verifyCode = async () => {
     const userCred = await confirm.value.confirm(code.value)
     alert('Вхід успішний: ' + userCred.user.phoneNumber)
   } catch (err) {
-    console.error(err)
     alert('Невірний код')
   }
 }

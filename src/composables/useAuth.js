@@ -1,50 +1,52 @@
 import { auth, db } from '../firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
-import { ref } from 'vue'
-import { useAuthStore } from '../stores/authStore' // 👈 нове
-
-const user = ref(null)
+import { useAuthStore } from '../stores/authStore'
 
 const initUser = async (firebaseUser) => {
-  if (!firebaseUser) return
+  const authStore = useAuthStore()
 
-  const uid = firebaseUser.uid
-  const userRef = doc(db, 'users', uid)
-  const userSnap = await getDoc(userRef)
-
-  const authStore = useAuthStore() // 👈 ініціалізуємо store
-
-  if (!userSnap.exists()) {
-    // якщо новий користувач — створюємо
-    await setDoc(userRef, {
-      phone: firebaseUser.phoneNumber,
-      role: 'client',
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
-      active: true
-    })
-
-    authStore.setUser(firebaseUser, 'client') // 👈 запис у store
-  } else {
-    const userData = userSnap.data()
-    await setDoc(userRef, {
-      ...userData,
-      lastLogin: serverTimestamp()
-    })
-
-    authStore.setUser(firebaseUser, userData.role) // 👈 роль з бази
+  if (!firebaseUser) {
+    authStore.logout()
+    return
   }
 
-  user.value = { uid, ...firebaseUser }
+  try {
+    const uid = firebaseUser.uid
+    const userRef = doc(db, 'users', uid)
+    const userSnap = await getDoc(userRef)
+
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        phone: firebaseUser.phoneNumber,
+        role: 'client',
+        createdAt: serverTimestamp(),
+        lastLogin: serverTimestamp(),
+        active: true
+      })
+      authStore.setUser(firebaseUser, 'client')
+    } else {
+      const userData = userSnap.data()
+      await setDoc(userRef, {
+        ...userData,
+        lastLogin: serverTimestamp()
+      })
+      authStore.setUser(firebaseUser, userData.role)
+    }
+  } catch (err) {
+    console.error('initUser помилка:', err)
+    authStore.logout()
+  }
 }
 
-const watchAuth = () => {
-  onAuthStateChanged(auth, (firebaseUser) => {
-    initUser(firebaseUser)
-  })
-}
+export const useAuth = () => {
+  const authStore = useAuthStore()
 
-export function useAuth() {
-  return { user, watchAuth }
+  const watchAuth = () => {
+    onAuthStateChanged(auth, async (firebaseUser) => {
+      await initUser(firebaseUser)
+    })
+  }
+
+  return { watchAuth }
 }

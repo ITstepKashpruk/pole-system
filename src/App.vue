@@ -28,18 +28,18 @@ onMounted(async () => {
 })
 </script>
 
-
 <template>
-  <div>
-    <h1>Pole System</h1>
-    <Login v-if="!authStore.user" />
-    <p v-if="!authStore.role">Вхід...</p>
-<p v-if="authStore.user">Телефон: {{ authStore.user.phoneNumber }}</p>
-<p v-if="authStore.role">Роль: {{ authStore.role }}</p>
-    <AdminPanel v-else-if="authStore.role === 'admin'" />
-    <TrainerPanel v-else-if="authStore.role === 'trainer'" />
-    <ClientPanel v-else />
+  <div v-if="!authStore.isAuthReady">
+    <p>Завантаження...</p>
   </div>
+
+  <div v-else>
+    <Login v-if="!authStore.user" />
+    <AdminPanel v-if="authStore.role === 'admin'" />
+    <TrainerPanel v-else-if="authStore.role === 'trainer'" />
+    <ClientPanel v-else-if="authStore.role === 'client'" />
+  </div>
+
 </template>
 
 
